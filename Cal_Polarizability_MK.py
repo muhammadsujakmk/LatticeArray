@@ -6,19 +6,19 @@ from scipy.constants import epsilon_0, mu_0, c
 import os
 
 def path():
-    return r"C:\RESEARCH\RESEARCH MOL\Surface Lattice\All-Dielectric\Silicon nanodisk\SemiAnalytic Calculation\COMSOL_Calculation"
+    return r"F:\101\RESEARCH MOL\Surface Lattice\All-Dielectric\Silicon nanodisk\Array Silicon Cal\SemiAnalytic Calculation\COMSOL_Calculation"
 
 
 def main(): 
-    Idx = [2,3] 
+    Idx = [4,5] 
     for idx in Idx:
-        if idx==2:
+        if idx==4:
             label = "EDx"
-        elif idx==3:
+        elif idx==5:
             label = "MDy"
             
         epsd = 1.45
-        filename = path()+'\Single_Scat_D200H100_EDxMDy_medAir'
+        filename = os.path.join(path(),f"Single_Scat_D200H100_EDxMDy_medAir_normal")
         filein= f"{filename}.txt"
         fileout = f"{filename}_{label}.txt"
         fileclean = f"{filename}_{label}_clean.txt"
@@ -28,24 +28,23 @@ def main():
     #fig = plt.figure()
     fig = plt.figure(figsize=(8,6))
     eps0 = epsilon_0
-    zeta0 = mu_0*c
     E0 = 1 #V/m
     
     fnameED = np.loadtxt(filename+"_EDx_clean.txt",dtype=complex) 
     fnameMD = np.loadtxt(filename+"_MDy_clean.txt",dtype=complex)
     
     x = fnameED[:,0] 
-    yED = fnameED[:,1]/(eps0*epsd*E0)
-    yMD = fnameMD[:,1]*zeta0/E0*c
+    yED = fnameED[:,1]/E0
+    yMD = fnameMD[:,1]/E0
     Xi=np.argmax(yMD.imag)
     
     yED_mod = modify_pol(yED, H=100e-9, n_d=1.45, n_s=1)
     yMD_mod = modify_pol(yMD, H=100e-9, n_d=1.45, n_s=1)
     
-    plt.plot(x,yED.imag
+    plt.plot(x,yED.real
             #,color="blue",label="Re $\u03B1^{MD}$",linewidth=3)
             ,color="black",label="Re $\u03B1^{ED}$",linewidth=3)
-    plt.plot(x,yED_mod.imag
+    plt.plot(x,yED_mod.real
     #plt.plot(x,yMD.imag*1e20
             #,"--",color="red",label="Im $\u03B1^{ED}$",linewidth=3) 
             ,"--",color="blue",label="Re $\u03B1^{ED Modified}$",linewidth=3) 
