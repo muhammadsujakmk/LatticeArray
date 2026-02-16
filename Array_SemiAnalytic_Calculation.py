@@ -44,15 +44,15 @@ def Pol_single(wvl, med):
     return pxNormal_val, myNormal_val,pxLateral_val, myLateral_val
 
 
-def lattice_sum(kd, P, N=20):
+def lattice_sum(kd, Px, Py, N=20):
     Sxx = 0.0 + 0.0j; Syy = 0.0 + 0.0j
     for nx in range(-N, N+1):
         for ny in range(-N, N+1):
             if nx ==0 and ny==0:
                 continue
              
-            y = ny*P
-            x = nx*P
+            y = ny*Py
+            x = nx*Px
             R = np.hypot(x,y)
             res0 = kd**2/(4*np.pi) * np.exp(1j*kd*R) 
             
@@ -87,12 +87,12 @@ def main():
     lam = np.linspace(450, 750, 1000)*nm
 
     # environment
-    n_d, med = 1.45,"Glass" # use Air with n_d = 1 and Glass with n_d = 1.45
+    n_d, med = 1,"Air" # use Air with n_d = 1 and Glass with n_d = 1.45
     epsd = (n_d)**2
 
     # lattice
     Px = 220*nm
-    Py = 517*nm
+    Py = 600*nm
     A = Px * Py
     
     R_list = []
@@ -116,8 +116,8 @@ def main():
 
         ##___Green function methods, select one of them
         #Sxx, Syy = lattice_S_from_prb(kd, P, N=51, convention = "exp(+ikR)")
-        Sxx, Syy = lattice_Sxx_Syy_realspace(kd, Dx=Px, Dy=Py, N=51, convention = "exp(+ikR)")
-        #Sxx, Syy = lattice_sum(kd, P, N=151)
+        Sxx, Syy = lattice_Sxx_Syy_realspace(kd, Dx=Px, Dy=Py, Nx=8,Ny=10, convention = "exp(+ikR)")
+        #Sxx, Syy = lattice_sum(kd, Px=Px, Py=Py, N=2)
         #Sxx_list.append(Sxx)
         #Syy_list.append(Syy)
         
