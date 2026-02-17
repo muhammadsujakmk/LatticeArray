@@ -1,6 +1,5 @@
 from scipy import special
 import mpmath as mp
-import mpmath as mp
 
 def spherical_jn_mp(n, z):
     # j_n(z) = sqrt(pi/(2z)) * J_{n+1/2}(z)
