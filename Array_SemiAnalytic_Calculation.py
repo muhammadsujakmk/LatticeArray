@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from em_pol_func import alpha_em
 import os
-from Reciprocal_Space_Gfun import lattice_S_from_prb
-from Real_Space_TrunGreenFunc import lattice_Sxx_Syy_realspace
-
+from Real_Space_Gfunc import Sxx_Syy_from_G0
+from LatticeSum import lattice_sum_sub, lattice_sum
 
 
 def path():
@@ -44,32 +43,6 @@ def Pol_single(wvl, med):
     return pxNormal_val, myNormal_val,pxLateral_val, myLateral_val
 
 
-def lattice_sum(kd, Px, Py, N=20):
-    Sxx = 0.0 + 0.0j; Syy = 0.0 + 0.0j
-    for nx in range(-N, N+1):
-        for ny in range(-N, N+1):
-            if nx ==0 and ny==0:
-                continue
-             
-            y = ny*Py
-            x = nx*Px
-            R = np.hypot(x,y)
-            res0 = kd**2/(4*np.pi) * np.exp(1j*kd*R) 
-            
-            ## FF terms
-            Sxx += res0 / R * (1 - x**2/R**2)
-            Syy += res0 / R * (1 - y**2/R**2)
-            
-            ## MF terms
-            Sxx += res0 / R**2 * (1j/kd - 3j*x**2/(kd*R**2))
-            Syy += res0 / R**2 * (1j/kd - 3j*y**2/(kd*R**2))
-            
-            ## NF terms
-            Sxx += res0 / R**3 * (-1/kd**2 + 3*x**2/(kd**2 * R**2))
-            Syy += res0 / R**3 * (-1/kd**2 + 3*y**2/(kd**2 * R**2))
-            
-    return Sxx, Syy
-
 def radiative_correction(alpha, kd):
     return 1.0 / (1.0/alpha - 1j*kd**3/(6*np.pi))
 
@@ -84,11 +57,16 @@ def main():
     r = 65*nm # Single scatterer radius
 
     # wavelength grid (meters)
-    lam = np.linspace(450, 750, 1000)*nm
+    lam = np.linspace(450, 750, 61)*nm
 
     # environment
     n_d, med = 1,"Air" # use Air with n_d = 1 and Glass with n_d = 1.45
     epsd = (n_d)**2
+    
+    n_s, med_sub = 1.5, "Glass" # Substrate parameter
+    epss = (n_s)**2
+    zp = r # The distance of particle's center to substrate surface
+    
 
     # lattice
     Px = 220*nm
@@ -98,12 +76,11 @@ def main():
     R_list = []
     T_list = []
     Ab_list = []
-    S_list = []
-    inv_ap_list = []
-    inv_am_list= []
-    for wvl in lam: 
+    for wvl in lam:
+        eta = 1e-3 
         k0 = 2*np.pi / wvl
         kd = n_d * k0 
+        kdG = n_d * k0 * (1+1j*eta)
         
         #----Polarizabilty of single scatterer
         #alpha_p1x, alpha_m1y, alpha_p2x, alpha_m2y = Pol_single(wvl/1e-9, med)
@@ -115,42 +92,32 @@ def main():
         #alpha_m1y = radiative_correction(alpha_m1y, kd)
 
         ##___Green function methods, select one of them
-        #Sxx, Syy = lattice_S_from_prb(kd, P, N=51, convention = "exp(+ikR)")
-        Sxx, Syy = lattice_Sxx_Syy_realspace(kd, Dx=Px, Dy=Py, Nx=8,Ny=10, convention = "exp(+ikR)")
-        #Sxx, Syy = lattice_sum(kd, Px=Px, Py=Py, N=2)
-        #Sxx_list.append(Sxx)
-        #Syy_list.append(Syy)
+        #Sxx, Syy = Sxx_Syy_from_G0(kd=kd, Dx=Px, Dy=Py, N=200)
+        Sxx, Syy = lattice_sum(kdG, Px=Px, Py=Py, N=200)
+        #Sxx, Syy = lattice_sum_sub(kdG, Px, Py, zp, epsd, epss, N=200)
+       
+        #_____Effective polarizabilty for homogeneous env_______
+        #alpha_peff = 1/((1/alpha_p1x) - (alpha_p2x/alpha_p1x)*Syy)
+        alpha_peff = 1/((1/alpha_p1x) - Sxx)
+        #alpha_meff = 1/((1/alpha_m1y) - (alpha_m2y/alpha_m1y)*Syy)
+        alpha_meff = 1/((1/alpha_m1y) - Syy)
+            
+        #_____with substrate effect________________________________
+        C =  1/( 4*np.pi*(2*zp)**3 ) * ((epsd-epss)/(epsd+epss))
+        inv_alpha_p1x_s = (1/alpha_p1x) + C
+        #alpha_peff = 1/(inv_alpha_p1x_s - Sxx)
+        #alpha_meff = 1/((1/alpha_m1y) - Syy)
         
-        inv_alpha_peff = (1/alpha_p1x) - Sxx
-        #inv_alpha_peff = (1/alpha_p1x) - (alpha_p2x/alpha_p1x)*Sxx
-        #inv_alpha_peff = ((1/alpha_p1x) - Sxx)
-        inv_alpha_meff = (1/alpha_m1y) - Syy
-        #inv_alpha_meff = (1/alpha_m1y) - (alpha_m2y/alpha_m1y)*Syy
-        #inv_alpha_meff = ((1/alpha_m1y) - Syy)
-        alpha_peff = 1/inv_alpha_peff
-        alpha_meff = 1/inv_alpha_meff
-        
-        inv_ap_list.append(inv_alpha_peff)     # complex
-        inv_am_list.append(inv_alpha_meff)     # complex
-
-        
-        fac = -1j*kd/(2*A)
-        r_ = fac*(alpha_peff - alpha_meff)
-        t_ = 1 - fac*(alpha_peff + alpha_meff)
-        R = abs(r_)**2
-        T = abs(t_)**2
+        fac = 1j*kd/(2*A) # "-fac..." for substrate otherwise use "+fac..."
+        r_amp= fac*(alpha_peff - alpha_meff)
+        t_amp = 1 + fac*(alpha_peff + alpha_meff)
+        #t_amp = 1 - fac*(alpha_peff + alpha_meff)  #__ for SI notation
+        R = abs(r_amp)**2
+        T = abs(t_amp)**2
         Ab = 1-T-R
-        """
-        R = fac**2 * ( (np.real(alpha_peff)-np.real(alpha_meff))**2 + (np.imag(alpha_peff)-np.imag(alpha_meff))**2 )
-        T = ( 1-fac*((np.imag(alpha_peff)-np.imag(alpha_meff))) )**2 + fac**2 * (np.real(alpha_peff)-np.real(alpha_meff))**2 
-        Ab = 1-R-T 
-        """
         R_list.append(R)
         T_list.append(T)
         Ab_list.append(Ab)
-        #print("Imag(alpha_p1x) = ", 1/np.imag(alpha_p1x))
-        #print("R = ", R) 
-        #print("--------------------") 
     plt.plot(lam/1e-9, R_list, label="Reflectance (R), Couple-Dipole")
     plt.plot(lam/1e-9, T_list, label="Transmittance (T), Couple-Dipole")
     #plt.plot(lam/1e-9, Ab_list, label="Absorption (A), Couple-Dipole")
@@ -160,4 +127,3 @@ def main():
     plt.show()
 
 main()
-
