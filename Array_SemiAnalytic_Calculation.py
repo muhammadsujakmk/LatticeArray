@@ -39,7 +39,7 @@ def Pol_single(wvl, med):
     pxLateral_val = pxLateral_fun(wvl)
     myLateral_val = myLateral_fun(wvl)
     
-    return -pxNormal_val.real+1j*pxNormal_val.imag, myNormal_val.real+1j*myNormal_val.imag, -pxLateral_val.real+1j*pxLateral_val.imag, myLateral_val.real+1j*myLateral_val.imag
+    return -pxNormal_val.real+1j*pxNormal_val.imag, -myNormal_val.real+1j*myNormal_val.imag, -pxLateral_val.real+1j*pxLateral_val.imag, -myLateral_val.real+1j*myLateral_val.imag
 
 
 def radiative_correction(alpha, kd):
@@ -126,4 +126,5 @@ def main():
     plt.show()
 
 main()
+
 
